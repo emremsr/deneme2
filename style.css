@@ -1,0 +1,259 @@
+body {
+  position: relative;
+  background: #ffffff;
+  margin: 0px 50px;
+  height: 1000px;
+  font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS", sans-serif;
+}
+
+header {
+  width: 100%;
+  height: 590px;
+  background-image: url("https://images.pexels.com/photos/109669/pexels-photo-109669.jpeg?auto=compress&cs=tinysrgb&w=600");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  justify-content: center;
+}
+
+.header-content {
+  display: flex;
+  align-items: flex-start;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.left-card,
+.right-card {
+  height: 300px;
+  flex: 1;
+  padding: 20px;
+  margin: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.center-content {
+  color: aliceblue;
+  flex: 1;
+  text-align: center;
+}
+
+.navbar {
+  position: fixed;
+  width: 80%;
+  background: linear-gradient(
+    to right,
+    rgb(159, 159, 159) 0%,
+    rgba(192, 192, 192, 0) 100%
+  );
+  margin-top: 20px;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
+}
+
+.logo {
+  color: black;
+  font-size: 1.5em;
+  text-decoration: none;
+}
+
+.nav-list {
+  list-style: none;
+  display: flex;
+}
+
+.nav-list li {
+  margin-right: 20px;
+}
+
+.nav-list a {
+  text-decoration: none;
+  color: #5a638c;
+  font-size: large;
+}
+
+.menu-icon {
+  font-size: 1.5em;
+  color: white;
+  cursor: pointer;
+  display: none;
+}
+
+.movieClass {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  z-index: 1;
+}
+
+.movie-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.img-container {
+  position: relative;
+}
+
+.header-img {
+  height: 400px;
+}
+
+.movieClass img {
+  width: 100%;
+  height: 500px;
+  display: block;
+}
+
+.overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #574864;
+  color: white;
+  text-align: center;
+  padding: 40px 0;
+  font-weight: 400;
+  box-sizing: border-box;
+}
+
+.overlay2 {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: black;
+  color: white;
+  text-align: center;
+  padding: 40px 0;
+  font-weight: 400;
+  box-sizing: border-box;
+  opacity: 0.7;
+}
+
+.movie-item .overlay {
+  opacity: 0.9;
+}
+
+.overlay h2 {
+  margin: 0;
+}
+
+.vote-average {
+  width: fit-content;
+  background-color: #241239;
+  padding: 8px 20px 8px 20px;
+  color: white;
+  border-radius: 2px 2px;
+  float: right;
+  margin-bottom: 0px;
+}
+
+.vote-average2 {
+  width: fit-content;
+  background-color: white;
+  padding: 8px 20px 8px 20px;
+  color: black;
+  border-radius: 2px 2px;
+  float: right;
+  font-weight: 900;
+  margin-bottom: 0px;
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #241239;
+  color: white;
+  padding: 0 30px 0 30px;
+}
+
+footer div {
+  display: flex;
+  gap: 20px;
+}
+
+@media screen and (min-width: 769px) and (max-width: 1100px) {
+  .navbar {
+    width: 80%; 
+  }
+
+  .left-card,
+  .right-card {
+    display: none; 
+  }
+  .movieClass {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  body {
+    margin: 0px 20px;
+    height: 1000px;
+  }
+
+  .nav-list {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 70px;
+    left: 0;
+    width: 100%;
+    background-color: #333;
+    text-align: center;
+  }
+
+  .nav-list.show {
+    display: flex;
+  }
+
+  .nav-list li {
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+
+  .menu-icon {
+    display: block;
+  }
+
+  .header-content {
+    margin-top: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+  }
+
+  .left-card,
+  .center-content,
+  .right-card {
+    width: 100%;
+    margin: 20px 0;
+  }
+  .movieClass {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .right-card.mobile-hidden,
+  .left-card.mobile-hidden {
+    display: none;
+  }
+  footer {
+    display: grid;
+  }
+
+  footer div {
+    display: grid;
+  }
+}

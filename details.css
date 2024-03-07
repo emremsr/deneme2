@@ -1,0 +1,87 @@
+body {
+  height: 100%;
+  background: linear-gradient(rgb(0, 0, 0), rgb(165, 154, 172));
+  color: white;
+  padding: 5px 50px 0 50px;
+  transition: background 0.5s ease-in-out;
+  opacity: 0.9;
+}
+
+div {
+  display: flex;
+}
+
+nav {
+  width: 100%;
+  padding: 30px 0;
+  display: flex;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+  align-items: start;
+  padding-left: 50px;
+}
+
+h2 {
+  font-size: x-large;
+  font-weight: 500;
+  transition: all 1.5s ease;
+}
+
+h2:hover {
+  font-size: xx-large;
+  font-weight: 700;
+  color: darkorange;
+}
+
+.overview span {
+  font-size: larger;
+  transition: all 1s ease;
+}
+.overview span:hover {
+  font-size: x-large;
+}
+
+.genders {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+}
+
+.companyName span{
+  font-size: larger;
+  transition: all 1s ease;
+}
+
+.companyName span:hover {
+  font-size: x-large;
+}
+
+@media screen and (max-width: 768px) {
+  body {
+    padding: 0;
+  }
+  div {
+    display: grid;
+    place-items: center;
+    grid-template-columns: repeat(1, 1fr);
+  }
+  .details {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .genders {
+    width: 100%;
+    display: grid;
+    justify-content: start;
+  }
+}
