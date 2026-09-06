@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Karanlık Oda",
+    "slug": "karanlik-oda",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.emremsr.karanlikoda"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0b0b0d",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.emremsr.karanlikoda"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "karanlikoda",
+    "backgroundColor": "#0b0b0d",
+    "primaryColor": "#b8352e"
+  }
+}
