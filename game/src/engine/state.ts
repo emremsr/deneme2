@@ -1,4 +1,4 @@
-import type { Clue, Condition, Effect, LocalizedText, Lang } from "./types";
+import type { Clue, Condition, Effect, LocalizedText, Lang, Scene } from "./types";
 
 /** Kayıt formatı değişirse artır — eski kayıtlar sessizce atılır. */
 export const SAVE_VERSION = 1;
@@ -126,4 +126,52 @@ export function acknowledgeRevisions(clues: Clue[], s: GameState): GameState {
   const revisionSeen = { ...s.revisionSeen };
   for (const c of clues) revisionSeen[c.id] = readClue(c, s).index;
   return { ...s, revisionSeen };
+}
+
+// ---------------------------------------------------------------- sahne geçişi
+
+/** Sahneye ilk giriş bu anahtarla işaretlenir; giriş metni yalnızca bir kez akar. */
+export const seenKey = (sceneId: string) => `seen:${sceneId}`;
+
+export interface SceneEntry {
+  next: GameState;
+  /** İlk gelişse akıtılacak giriş metni, değilse null. */
+  intro: LocalizedText[] | null;
+}
+
+/**
+ * Sahne geçişini hesaplar. Saf fonksiyon: durumu ve akıtılacak metni birlikte
+ * döndürür, böylece ikisi tek render'da uygulanabilir.
+ *
+ * Bu mantık bilerek bileşenin dışında: önceden GameProvider içinde setTimeout
+ * ile ertelendiği için bölüm sonu sahnesinde kapanış metni atlanıyordu ve
+ * test edilemediği için gözden kaçmıştı.
+ */
+export function enterScene(
+  base: GameState,
+  scene: Scene | undefined,
+  sceneId: string
+): SceneEntry {
+  const moved = { ...base, sceneId };
+  const key = seenKey(sceneId);
+  if (!scene || base.firedActions.includes(key)) return { next: moved, intro: null };
+  return {
+    next: { ...moved, firedActions: [...moved.firedActions, key] },
+    intro: scene.intro?.length ? scene.intro : null,
+  };
+}
+
+/**
+ * Bölüm sonu kartı açılmalı mı?
+ * Anlatı akarken veya sahneye daha yeni girilmişken açılmamalı — yoksa
+ * kapanış metni oyuncuya hiç gösterilmeden kart devralır.
+ */
+export function shouldShowChapterEnd(
+  s: GameState,
+  scene: Scene | undefined,
+  narrating: boolean
+): boolean {
+  if (narrating) return false;
+  if (!scene?.chapterEnd) return false;
+  return s.firedActions.includes(seenKey(s.sceneId));
 }

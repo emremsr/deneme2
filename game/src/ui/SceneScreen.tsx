@@ -59,7 +59,13 @@ export function SceneScreen({ onOpenNotebook }: { onOpenNotebook: () => void }) 
           {scene.hotspots
             .filter((h) => test(h.visibleIf, g.state))
             .map((h) => (
-              <HotspotMarker key={h.id} hotspot={h} onPress={() => tap(h)} dim={narrating} />
+              <HotspotMarker
+                key={h.id}
+                hotspot={h}
+                label={t(h.label, g.lang)}
+                onPress={() => tap(h)}
+                dim={narrating}
+              />
             ))}
         </View>
       </View>
@@ -133,10 +139,13 @@ export function SceneScreen({ onOpenNotebook }: { onOpenNotebook: () => void }) 
 /** Hotspot: görünmez dokunma alanı + üstünde çok soluk bir halka. */
 function HotspotMarker({
   hotspot,
+  label,
   onPress,
   dim,
 }: {
   hotspot: Hotspot;
+  /** İçerikteki `label` buraya bağlanır — ekran okuyucu için tek ipucu bu. */
+  label: string;
   onPress: () => void;
   dim: boolean;
 }) {
@@ -166,6 +175,7 @@ function HotspotMarker({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={label}
       style={{
         position: "absolute",
         left: `${hotspot.x}%`,

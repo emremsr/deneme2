@@ -34,7 +34,10 @@ export function validateContent(): string[] {
   const sceneIds = new Set(SCENES.map((s) => s.id));
   const puzzleIds = new Set(PUZZLES.map((p) => p.id));
 
-  const checkEffects = (where: string, effects?: { kind: string; id?: string }[]) => {
+  const checkEffects = (
+    where: string,
+    effects?: { kind: string; id?: string; next?: string }[]
+  ) => {
     for (const e of effects ?? []) {
       if (e.kind === "addClue" && e.id && !clueIds.has(e.id))
         errors.push(`${where}: bilinmeyen ipucu "${e.id}"`);
@@ -42,6 +45,8 @@ export function validateContent(): string[] {
         errors.push(`${where}: bilinmeyen sahne "${e.id}"`);
       if (e.kind === "openPuzzle" && e.id && !puzzleIds.has(e.id))
         errors.push(`${where}: bilinmeyen bulmaca "${e.id}"`);
+      if (e.kind === "endChapter" && e.next && !sceneIds.has(e.next))
+        errors.push(`${where}: bilinmeyen bölüm sonu sahnesi "${e.next}"`);
     }
   };
 
@@ -54,6 +59,15 @@ export function validateContent(): string[] {
     }
     for (const x of s.exits ?? []) {
       if (!sceneIds.has(x.to)) errors.push(`${s.id}/${x.id}: bilinmeyen çıkış "${x.to}"`);
+    }
+    // Bölüm sonu kartı, henüz yazılmamış bir bölüme işaret ediyorsa bu bir hata
+    // değildir (teaser olarak gösterilir) — ama var olan bir bölümün giriş
+    // sahnesi eksikse oyun orada takılır.
+    const nextId = s.chapterEnd?.nextChapter;
+    if (nextId != null) {
+      const next = CHAPTERS.find((c) => c.id === nextId);
+      if (next && !sceneIds.has(next.entryScene))
+        errors.push(`${s.id}: ${nextId}. bölümün giriş sahnesi "${next.entryScene}" yok`);
     }
   }
   for (const p of PUZZLES) checkEffects(`bulmaca/${p.id}`, p.onSolve.effects);

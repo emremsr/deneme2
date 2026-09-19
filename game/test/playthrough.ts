@@ -9,8 +9,16 @@
  *
  * Çalıştır: npm test
  */
-import { CLUES, PUZZLES_BY_ID, SCENES_BY_ID, validateContent } from "../src/content";
-import { apply, initialState, readClue, test as check, type GameState } from "../src/engine/state";
+import { CLUES, PUZZLES_BY_ID, SCENES, SCENES_BY_ID, validateContent } from "../src/content";
+import {
+  apply,
+  enterScene,
+  initialState,
+  readClue,
+  shouldShowChapterEnd,
+  test as check,
+  type GameState,
+} from "../src/engine/state";
 import type { Hotspot, Scene } from "../src/engine/types";
 
 let failures = 0;
@@ -131,14 +139,68 @@ const kilitliTest = initialState("tr", "b1_karanlik_oda");
 ok(!check(kapi.enabledIf, kilitliTest), "oyun başında kapı kilitli");
 ok(!!kapi.blockedText, "kilitli kapının açıklama metni var");
 
-// Eşiğe geç.
-state = { ...state, sceneId: "b1_esik" };
+// Eşiğe geç — sahne geçişi motorun kendi fonksiyonuyla yapılmalı.
+const esikGecis = enterScene(state, scene("b1_esik"), "b1_esik");
+state = esikGecis.next;
+ok(esikGecis.intro !== null, "eşiğe ilk girişte giriş metni akıyor");
+
+const tekrarGiris = enterScene(state, scene("b1_esik"), "b1_esik");
+ok(tekrarGiris.intro === null, "aynı sahneye ikinci girişte metin tekrar akmıyor");
+
 const esik = scene("b1_esik");
 for (const h of esik.hotspots) exhaust(h);
 ok(state.flags.includes("b1_kapak_gordum"), "eşikte gözetleme kapağı fark edildi");
 
-state = { ...state, sceneId: "b1_son" };
-ok(!!scene("b1_son").chapterEnd, "kapanış sahnesi bölüm sonu kartını tetikliyor");
+// -------------------------------------------------- bölüm sonu (regresyon)
+section("Bölüm sonu akışı");
+const sonSahne = scene("b1_son");
+ok(!!sonSahne.chapterEnd, "kapanış sahnesi bölüm sonu kartı taşıyor");
+
+// Bölüm sonu taşımayan bir sahnede kart asla açılmamalı.
+ok(
+  !shouldShowChapterEnd(state, scene("b1_esik"), false),
+  "sıradan sahnede bölüm sonu kartı açılmıyor"
+);
+
+// Sahneye "görüldü" işareti konmadan (ör. doğrudan atlanarak) kart açılmamalı:
+// bu işaret, kapanış metninin akıtıldığı anda konur.
+ok(
+  !shouldShowChapterEnd({ ...state, sceneId: "b1_son" }, sonSahne, false),
+  "kapanış metni akıtılmadan bölüm sonu kartı açılmıyor"
+);
+
+const sonGecis = enterScene(state, sonSahne, "b1_son");
+state = sonGecis.next;
+
+// REGRESYON: kapanış metni atlanıp doğrudan karta sıçranıyordu.
+ok(
+  sonGecis.intro !== null && sonGecis.intro.length > 0,
+  `kapanış metni gösteriliyor (${sonGecis.intro?.length ?? 0} blok)`
+);
+ok(
+  !shouldShowChapterEnd(state, sonSahne, true),
+  "kapanış metni akarken bölüm sonu kartı devralmıyor"
+);
+ok(
+  shouldShowChapterEnd(state, sonSahne, false),
+  "kapanış metni bitince bölüm sonu kartı açılıyor"
+);
+
+// Bölüm sonu taşıyan her sahnenin kapanış metni olmalı.
+for (const sc of SCENES.filter((x) => x.chapterEnd)) {
+  ok((sc.intro?.length ?? 0) > 0, `${sc.id}: bölüm sonu sahnesinin kapanış metni var`);
+}
+
+// Yeni oyun, önceki oyunun "görüldü" işaretlerini taşımamalı.
+const yeniOyun = enterScene(
+  initialState("tr", "b1_karanlik_oda"),
+  scene("b1_karanlik_oda"),
+  "b1_karanlik_oda"
+);
+ok(
+  yeniOyun.intro !== null,
+  "yeni oyunda açılış metni, daha önce oynanmış olsa bile yeniden akıyor"
+);
 
 // -------------------------------------------------- ipucu tipleri
 section("İpucu tipi kuralları");

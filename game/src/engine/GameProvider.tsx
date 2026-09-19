@@ -7,12 +7,21 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { CLUES, CLUES_BY_ID, FIRST_SCENE, PUZZLES_BY_ID, SCENES_BY_ID } from "../content";
+import {
+  CHAPTERS_BY_ID,
+  CLUES,
+  CLUES_BY_ID,
+  FIRST_SCENE,
+  PUZZLES_BY_ID,
+  SCENES_BY_ID,
+} from "../content";
 import {
   acknowledgeRevisions,
   apply,
   changedClues,
+  enterScene,
   initialState,
+  shouldShowChapterEnd,
   test,
   type GameState,
 } from "./state";
@@ -71,8 +80,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("tr");
   const [state, setState] = useState<GameState>(() => initialState("tr", FIRST_SCENE));
   const [narration, setNarration] = useState<LocalizedText[] | null>(null);
-  const [lastNarration, setLastNarration] = useState<LocalizedText[] | null>(null);
   const [narrationStep, setNarrationStep] = useState(0);
+  const [lastNarration, setLastNarration] = useState<LocalizedText[] | null>(null);
   const [openPuzzleId, setOpenPuzzleId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const savedRef = useRef<GameState | null>(null);
@@ -110,37 +119,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     saveLang(l);
   }, []);
 
-  // -------------------------------------------------- etki uygulama
-  /**
-   * Etkileri uygular, yeni ipucu / değişen anı bildirimlerini çıkarır,
-   * bulmaca açılması gerekiyorsa açar.
-   */
-  const runEffects = useCallback(
-    (effects: Effect[] = []) => {
-      const puzzle = effects.find((e) => e.kind === "openPuzzle");
-      setState((prev) => {
-        let next = apply(prev, effects);
-
-        for (const e of effects) {
-          if (e.kind === "addClue" && !prev.clues.includes(e.id)) {
-            const clue = CLUES_BY_ID[e.id];
-            if (clue) pushToast("clue", clue.title[next.lang] ?? clue.title.tr);
-          }
-        }
-
-        // Yeni bir bölüme/bayrağa geçildiyse eski ipuçları yeniden yazılmış olabilir.
-        const changed = changedClues(CLUES, next);
-        if (changed.length > 0) {
-          pushToast("memory", changed.length === 1 ? "single" : "plural");
-          next = acknowledgeRevisions(changed, next);
-        }
-        return next;
-      });
-      if (puzzle && puzzle.kind === "openPuzzle") setOpenPuzzleId(puzzle.id);
-    },
-    [pushToast]
-  );
-
   // -------------------------------------------------- anlatı akışı
   const startNarration = useCallback((lines: LocalizedText[]) => {
     if (lines.length === 0) return;
@@ -149,39 +127,65 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setNarrationStep(0);
   }, []);
 
-  const enterScene = useCallback(
-    (sceneId: string, seenFlagPrefix = "seen:") => {
-      const scene = SCENES_BY_ID[sceneId];
-      setState((s) => {
-        const key = seenFlagPrefix + sceneId;
-        const first = !s.firedActions.includes(key);
-        if (first && scene?.intro?.length) {
-          // Giriş metni yalnızca ilk gelişte akar.
-          setTimeout(() => startNarration(scene.intro!), 0);
+  const advance = useCallback(() => {
+    if (!narration) return;
+    if (narrationStep + 1 >= narration.length) {
+      setNarration(null);
+      setNarrationStep(0);
+      return;
+    }
+    setNarrationStep(narrationStep + 1);
+  }, [narration, narrationStep]);
+
+  // -------------------------------------------------- etki uygulama
+  /**
+   * Etkileri `base` üzerine uygular ve YENİ durumu döndürür.
+   *
+   * Bildirimler ve bulmaca açılışı burada tetiklenir — bilerek bir setState
+   * güncelleyicisinin DIŞINDA. Güncelleyici saf kalmalı: React onu birden çok
+   * kez çağırabilir, yan etki içeriyorsa bildirimler ikilenir.
+   */
+  const commitEffects = useCallback(
+    (base: GameState, effects: Effect[] = []): GameState => {
+      let next = apply(base, effects);
+
+      for (const e of effects) {
+        if (e.kind === "addClue" && !base.clues.includes(e.id)) {
+          const clue = CLUES_BY_ID[e.id];
+          if (clue) pushToast("clue", clue.title[next.lang] ?? clue.title.tr);
         }
-        return first ? { ...s, firedActions: [...s.firedActions, key] } : s;
-      });
+        if (e.kind === "openPuzzle") setOpenPuzzleId(e.id);
+      }
+
+      // Yeni bayrak/ipucu eski bir ANI ipucunu yeniden yazmış olabilir.
+      const changed = changedClues(CLUES, next);
+      if (changed.length > 0) {
+        pushToast("memory", changed.length === 1 ? "single" : "plural");
+        next = acknowledgeRevisions(changed, next);
+      }
+      return next;
+    },
+    [pushToast]
+  );
+
+  /** Sahne geçişini uygular ve ilk gelişse giriş metnini akıtır. */
+  const enterSceneState = useCallback(
+    (base: GameState, sceneId: string): GameState => {
+      const { next, intro } = enterScene(base, SCENES_BY_ID[sceneId], sceneId);
+      // Metin, durum değişikliğiyle AYNI olayda başlatılır; ikisi tek render'da
+      // birlikte görünür ve kapanış metni bölüm sonu kartına yenilmez.
+      if (intro) startNarration(intro);
+      return next;
     },
     [startNarration]
   );
 
-  const advance = useCallback(() => {
-    setNarrationStep((i) => {
-      const total = narration?.length ?? 0;
-      if (i + 1 >= total) {
-        setNarration(null);
-        return 0;
-      }
-      return i + 1;
-    });
-  }, [narration]);
-
   // Anlatı bitince, sahne bölüm sonu ise kartı göster.
   useEffect(() => {
-    if (narration !== null || screen !== "game") return;
+    if (screen !== "game") return;
     const scene = SCENES_BY_ID[state.sceneId];
-    if (scene?.chapterEnd) setScreen("chapterEnd");
-  }, [narration, state.sceneId, screen]);
+    if (shouldShowChapterEnd(state, scene, narration !== null)) setScreen("chapterEnd");
+  }, [narration, state, screen]);
 
   // -------------------------------------------------- oyuncu eylemleri
   const tapHotspot = useCallback(
@@ -195,10 +199,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       startNarration(action.lines);
       if (action.once && alreadyFired) return;
-      if (action.once) setState((s) => ({ ...s, firedActions: [...s.firedActions, key] }));
-      runEffects(action.effects);
+
+      const base = action.once
+        ? { ...state, firedActions: [...state.firedActions, key] }
+        : state;
+      setState(commitEffects(base, action.effects));
     },
-    [narration, state, startNarration, runEffects]
+    [narration, state, startNarration, commitEffects]
   );
 
   const tapExit = useCallback(
@@ -208,10 +215,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (x.blockedText) startNarration([x.blockedText]);
         return;
       }
-      setState((s) => ({ ...s, sceneId: x.to }));
-      enterScene(x.to);
+      setState(enterSceneState(state, x.to));
     },
-    [narration, state, startNarration, enterScene]
+    [narration, state, startNarration, enterSceneState]
   );
 
   const solvePuzzle = useCallback(
@@ -219,28 +225,34 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const puzzle = PUZZLES_BY_ID[puzzleId];
       if (!puzzle) return;
       setOpenPuzzleId(null);
-      setState((s) => ({ ...s, solvedPuzzles: [...new Set([...s.solvedPuzzles, puzzleId])] }));
+      const base = {
+        ...state,
+        solvedPuzzles: [...new Set([...state.solvedPuzzles, puzzleId])],
+      };
+      setState(commitEffects(base, puzzle.onSolve.effects));
       startNarration(puzzle.onSolve.lines);
-      runEffects(puzzle.onSolve.effects);
     },
-    [startNarration, runEffects]
+    [state, commitEffects, startNarration]
   );
 
   const closePuzzle = useCallback(() => setOpenPuzzleId(null), []);
 
   // -------------------------------------------------- oyun yaşam döngüsü
   const startNew = useCallback(() => {
+    // Taze durumdan başlanır: önceki oyunun "görüldü" işaretleri taşınmaz,
+    // böylece açılış metni her yeni oyunda yeniden akar.
     const fresh = initialState(lang, FIRST_SCENE);
-    setState(fresh);
     setNarration(null);
     setLastNarration(null);
     setScreen("game");
-    enterScene(FIRST_SCENE);
-  }, [lang, enterScene]);
+    setState(enterSceneState(fresh, FIRST_SCENE));
+  }, [lang, enterSceneState]);
 
   const continueGame = useCallback(() => {
     const saved = savedRef.current;
     if (!saved) return startNew();
+    setNarration(null);
+    setLastNarration(null);
     setState({ ...saved, lang });
     setScreen("game");
   }, [lang, startNew]);
@@ -249,47 +261,41 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     await clearGame();
     savedRef.current = null;
     setHasSave(false);
+    setNarration(null);
+    setLastNarration(null);
+    setState(initialState(lang, FIRST_SCENE));
     setScreen("title");
-  }, []);
+  }, [lang]);
 
   const toTitle = useCallback(() => setScreen("title"), []);
 
+  /** Sonraki bölüm yazıldıysa oraya geçer, yazılmadıysa başlığa döner. */
   const nextChapter = useCallback(() => {
-    // Sonraki bölüm henüz yazılmadıysa oyuncuyu başlığa döndür.
-    setScreen("title");
-  }, []);
+    const target = SCENES_BY_ID[state.sceneId]?.chapterEnd?.nextChapter;
+    const chapter = target != null ? CHAPTERS_BY_ID[target] : undefined;
+    if (!chapter) {
+      setScreen("title");
+      return;
+    }
+    setNarration(null);
+    setLastNarration(null);
+    setScreen("game");
+    setState(enterSceneState({ ...state, chapter: chapter.id }, chapter.entryScene));
+  }, [state, enterSceneState]);
 
   const visible = useCallback((cond?: Parameters<typeof test>[0]) => test(cond, state), [state]);
 
   const api = useMemo<GameApi>(
     () => ({
-      ready,
-      hasSave,
-      screen,
-      lang,
-      state,
-      narration,
-      narrationStep,
-      lastNarration,
-      toasts,
-      openPuzzleId,
-      setLang,
-      startNew,
-      continueGame,
-      deleteSave,
-      toTitle,
-      advance,
-      tapHotspot,
-      tapExit,
-      closePuzzle,
-      solvePuzzle,
-      visible,
-      nextChapter,
+      ready, hasSave, screen, lang, state,
+      narration, narrationStep, lastNarration, toasts, openPuzzleId,
+      setLang, startNew, continueGame, deleteSave, toTitle,
+      advance, tapHotspot, tapExit, closePuzzle, solvePuzzle, visible, nextChapter,
     }),
     [
-      ready, hasSave, screen, lang, state, narration, narrationStep, lastNarration, toasts, openPuzzleId,
-      setLang, startNew, continueGame, deleteSave, toTitle, advance, tapHotspot, tapExit,
-      closePuzzle, solvePuzzle, visible, nextChapter,
+      ready, hasSave, screen, lang, state, narration, narrationStep, lastNarration, toasts,
+      openPuzzleId, setLang, startNew, continueGame, deleteSave, toTitle, advance, tapHotspot,
+      tapExit, closePuzzle, solvePuzzle, visible, nextChapter,
     ]
   );
 
