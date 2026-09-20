@@ -1,0 +1,31 @@
+{
+  "name": "karanlik-oda",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^3.1.1",
+    "expo": "~57.0.20",
+    "expo-haptics": "^57.0.2",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-dom": "^19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "^5.9.1",
+    "react-native-svg": "^15.15.5",
+    "react-native-web": "^0.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "test": "tsc -p tsconfig.test.json && node .test-build/test/playthrough.js",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "private": true
+}
